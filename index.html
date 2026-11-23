@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semaforo Interattivo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 16px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Spazio centrale con il semaforo gigante */
+        .main-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            width: 100%;
+        }
+
+        #light {
+            width: 256px;
+            height: 256px;
+            border-radius: 50%;
+            transition: background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        @media (min-width: 640px) {
+            #light {
+                width: 320px;
+                height: 320px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #light {
+                width: 384px;
+                height: 384px;
+            }
+        }
+
+        .red {
+            background-color: #ff3b30;
+            box-shadow: 0 0 65px rgba(255, 59, 48, 0.85), inset 0 0 25px rgba(255, 255, 255, 0.2);
+        }
+
+        .yellow {
+            background-color: #ffcc00;
+            box-shadow: 0 0 65px rgba(255, 204, 0, 0.85), inset 0 0 25px rgba(255, 255, 255, 0.2);
+        }
+
+        .green {
+            background-color: #34c759;
+            box-shadow: 0 0 65px rgba(52, 199, 89, 0.85), inset 0 0 25px rgba(255, 255, 255, 0.2);
+        }
+
+        #status {
+            font-size: 16px;
+            font-weight: 500;
+            color: #a1a1aa;
+            letter-spacing: 0.3px;
+            min-height: 24px;
+            text-align: center;
+        }
+
+        /* Pannello controlli compatto in basso */
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #1c1c1e;
+            padding: 10px 16px;
+            border-radius: 14px;
+            border: 1px solid #2c2c2e;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+        }
+
+        .mode-switch {
+            display: flex;
+            background: #2c2c2e;
+            border-radius: 8px;
+            padding: 3px;
+        }
+
+        .mode-btn {
+            background: transparent;
+            border: none;
+            color: #8e8e93;
+            padding: 5px 11px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: #0a84ff;
+            color: #ffffff;
+        }
+
+        .divider {
+            width: 1px;
+            height: 22px;
+            background-color: #2c2c2e;
+        }
+
+        .timers {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #d1d1d6;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot.r { background-color: #ff3b30; }
+        .dot.y { background-color: #ffcc00; }
+        .dot.g { background-color: #34c759; }
+
+        input[type="number"] {
+            width: 46px;
+            padding: 4px 2px;
+            text-align: center;
+            background-color: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            color: #ffffff;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #0a84ff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-stage">
+        <div id="light" class="red"></div>
+        <div id="status">Rosso — restano 5s</div>
+    </div>
+
+    <div class="controls-bar" id="controlsBar">
+        <div class="mode-switch">
+            <button type="button" class="mode-btn active" id="btnAuto">Automatico</button>
+            <button type="button" class="mode-btn" id="btnManual">Manuale</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="timers">
+            <div class="input-group" title="Secondi Rosso">
+                <span class="dot r"></span>
+                <label for="redTime">Rosso</label>
+                <input type="number" id="redTime" value="5" min="1">
+            </div>
+            <div class="input-group" title="Secondi Giallo (0 per escludere)">
+                <span class="dot y"></span>
+                <label for="yellowTime">Giallo</label>
+                <input type="number" id="yellowTime" value="2" min="0">
+            </div>
+            <div class="input-group" title="Secondi Verde">
+                <span class="dot g"></span>
+                <label for="greenTime">Verde</label>
+                <input type="number" id="greenTime" value="10" min="1">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const light = document.getElementById('light');
+        const statusDiv = document.getElementById('status');
+        const redInput = document.getElementById('redTime');
+        const yellowInput = document.getElementById('yellowTime');
+        const greenInput = document.getElementById('greenTime');
+        const btnAuto = document.getElementById('btnAuto');
+        const btnManual = document.getElementById('btnManual');
+        const controlsBar = document.getElementById('controlsBar');
+
+        let mode = 'auto'; // 'auto' | 'manual'
+        let currentState = 'red'; // 'red' | 'yellow' | 'green'
+        let timeLeft = 5;
+        let timer = null;
+
+        function getDurations() {
+            const red = Math.max(1, parseInt(redInput.value, 10) || 1);
+            const yellowVal = parseInt(yellowInput.value, 10);
+            const yellow = isNaN(yellowVal) ? 2 : Math.max(0, yellowVal);
+            const green = Math.max(1, parseInt(greenInput.value, 10) || 1);
+            return { red, yellow, green };
+        }
+
+        function getNextState(state) {
+            const { yellow } = getDurations();
+            if (state === 'red') return 'green';
+            if (state === 'green') return yellow > 0 ? 'yellow' : 'red';
+            return 'red';
+        }
+
+        function getDurationForState(state) {
+            const d = getDurations();
+            return d[state];
+        }
+
+        function updateDisplay() {
+            light.className = currentState;
+            const labels = {
+                red: 'Rosso',
+                yellow: 'Giallo',
+                green: 'Verde'
+            };
+
+            if (mode === 'auto') {
+                statusDiv.textContent = `${labels[currentState]} — restano ${timeLeft}s`;
+            } else {
+                statusDiv.textContent = `${labels[currentState]} (Manuale: premi un tasto o tocca lo schermo)`;
+            }
+        }
+
+        function advanceState() {
+            currentState = getNextState(currentState);
+            timeLeft = getDurationForState(currentState);
+            updateDisplay();
+        }
+
+        function startAutoTimer() {
+            clearInterval(timer);
+            if (mode !== 'auto') return;
+
+            const d = getDurations();
+            if (currentState === 'yellow' && d.yellow === 0) {
+                currentState = 'red';
+                timeLeft = d.red;
+            } else if (timeLeft > d[currentState]) {
+                timeLeft = d[currentState];
+            }
+
+            updateDisplay();
+
+            timer = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    advanceState();
+                } else {
+                    updateDisplay();
+                }
+            }, 1000);
+        }
+
+        function setMode(newMode) {
+            if (mode === newMode) return;
+            mode = newMode;
+
+            if (mode === 'auto') {
+                btnAuto.classList.add('active');
+                btnManual.classList.remove('active');
+                timeLeft = getDurationForState(currentState);
+                startAutoTimer();
+            } else {
+                btnManual.classList.add('active');
+                btnAuto.classList.remove('active');
+                clearInterval(timer);
+                updateDisplay();
+            }
+        }
+
+        btnAuto.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setMode('auto');
+        });
+
+        btnManual.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setMode('manual');
+        });
+
+        // Aggiornamento in tempo reale dai campi numerici
+        [redInput, yellowInput, greenInput].forEach(input => {
+            input.addEventListener('input', () => {
+                const d = getDurations();
+                if (currentState === 'yellow' && d.yellow === 0) {
+                    currentState = 'red';
+                    timeLeft = d.red;
+                } else if (timeLeft > d[currentState]) {
+                    timeLeft = d[currentState];
+                }
+                updateDisplay();
+            });
+        });
+
+        // Gestione input in modalità manuale (tastiera, click, tap)
+        function handleManualTrigger(e) {
+            if (mode !== 'manual') return;
+            // Evita di attivare il cambio colore se l'utente clicca o scrive nella barra dei controlli
+            if (controlsBar.contains(e.target)) return;
+
+            if (e.type === 'touchstart') {
+                e.preventDefault(); // Evita il doppio scatto touch + click su dispositivi mobili
+            }
+            advanceState();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (mode !== 'manual') return;
+            if (document.activeElement && controlsBar.contains(document.activeElement)) return;
+            advanceState();
+        });
+
+        document.addEventListener('click', handleManualTrigger);
+        document.addEventListener('touchstart', handleManualTrigger, { passive: false });
+
+        // Avvio automatico iniziale
+        startAutoTimer();
+    </script>
+
+</body>
+</html>
